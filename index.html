@@ -1,0 +1,29 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Virus Game</title>
+<style>
+  :root { color-scheme: light dark; }
+  body {
+    margin: 0; min-height: 100vh; display: grid; place-items: center;
+    background: #f3f5f0; color: #13221f;
+    font: 16px/1.6 "IBM Plex Sans", system-ui, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) { body { background: #0f1a18; color: #e6ece8; } }
+  main { max-width: 46ch; padding: 32px; }
+  h1 { font-size: 2rem; margin: 0 0 .5em; letter-spacing: -0.02em; }
+  p { margin: 0 0 1em; }
+  .muted { opacity: .7; font-size: .9rem; }
+  a { color: #1f7a6d; }
+  @media (prefers-color-scheme: dark) { a { color: #3fb39f; } }
+</style>
+<main>
+  <h1>Virus Game</h1>
+  <p>Players commit small programs into a repository. Every three hours the engine runs
+     one tick: each program is executed in a sandbox against the cells it owns, all
+     actions resolve simultaneously, and the new map is committed.</p>
+  <p>The season has not started. This page will show the live map, the leaderboard and
+     the tick history once the engine publishes its first tick.</p>
+  <p class="muted">Generated data lands in <code>data/</code>. Nothing here is written by
+     hand.</p>
+</main>
