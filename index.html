@@ -1,29 +1,94 @@
 <!doctype html>
+<html lang="en">
+<head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Virus Game</title>
-<style>
-  :root { color-scheme: light dark; }
-  body {
-    margin: 0; min-height: 100vh; display: grid; place-items: center;
-    background: #f3f5f0; color: #13221f;
-    font: 16px/1.6 "IBM Plex Sans", system-ui, sans-serif;
-  }
-  @media (prefers-color-scheme: dark) { body { background: #0f1a18; color: #e6ece8; } }
-  main { max-width: 46ch; padding: 32px; }
-  h1 { font-size: 2rem; margin: 0 0 .5em; letter-spacing: -0.02em; }
-  p { margin: 0 0 1em; }
-  .muted { opacity: .7; font-size: .9rem; }
-  a { color: #1f7a6d; }
-  @media (prefers-color-scheme: dark) { a { color: #3fb39f; } }
-</style>
-<main>
-  <h1>Virus Game</h1>
-  <p>Players commit small programs into a repository. Every three hours the engine runs
-     one tick: each program is executed in a sandbox against the cells it owns, all
-     actions resolve simultaneously, and the new map is committed.</p>
-  <p>The season has not started. This page will show the live map, the leaderboard and
-     the tick history once the engine publishes its first tick.</p>
-  <p class="muted">Generated data lands in <code>data/</code>. Nothing here is written by
-     hand.</p>
-</main>
+<meta name="description" content="The live map, leaderboard and tick history of Virus Game: players commit small programs, and every three hours the engine runs one tick.">
+<link rel="stylesheet" href="style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><circle cx='8' cy='8' r='6' fill='%231f7a6d'/><circle cx='8' cy='8' r='2' fill='%23f3f5f0'/></svg>">
+</head>
+<body>
+<div class="shell">
+
+  <header class="topbar">
+    <h1>Virus Game</h1>
+    <div class="tickline">
+      <span class="tick num" id="tick-number">tick —</span>
+      <span class="muted" id="generated-at"></span>
+      <span class="badge badge--stale" id="stale-badge" hidden>stale</span>
+    </div>
+    <nav>
+      <a href="https://github.com/UnityInFlow/virus-game">how to play</a>
+      <a href="https://github.com/UnityInFlow/virus-game/blob/main/docs/rules.md">rules</a>
+    </nav>
+  </header>
+
+  <div class="notice" id="empty-state">
+    <strong>No tick has been published yet.</strong>
+    <span id="empty-detail"></span>
+  </div>
+
+  <div id="content" hidden>
+
+    <div class="board">
+      <section class="panel">
+        <h2>Map</h2>
+        <div class="map-wrap">
+          <canvas id="map" role="img" aria-label="game map"></canvas>
+          <div class="tooltip" id="map-tooltip" hidden></div>
+        </div>
+        <div class="legend" id="legend"></div>
+      </section>
+
+      <div class="column">
+        <section class="panel">
+          <h2>Leaderboard</h2>
+          <table>
+            <thead>
+              <tr><th>#</th><th>player</th><th>cells</th><th>share</th><th>Δ</th></tr>
+            </thead>
+            <tbody id="leaderboard-body"></tbody>
+          </table>
+          <p class="muted" id="share-note" style="margin:8px 0 0;font-size:.78rem"></p>
+        </section>
+
+        <section class="panel">
+          <h2>Player</h2>
+          <div id="player-detail"></div>
+        </section>
+      </div>
+    </div>
+
+    <div class="charts">
+      <section class="panel">
+        <h2>Cells held, by tick</h2>
+        <div class="chart" id="chart-cells"></div>
+        <div class="legend" id="cells-legend" style="gap:6px 14px"></div>
+      </section>
+
+      <div class="chart-pair">
+        <section class="panel">
+          <h2>Tick duration</h2>
+          <div class="chart" id="chart-duration"></div>
+        </section>
+        <section class="panel">
+          <h2>Strain failures</h2>
+          <div class="chart" id="chart-failures"></div>
+          <p class="muted" id="failures-note" style="margin:8px 0 0;font-size:.78rem"></p>
+        </section>
+      </div>
+    </div>
+
+  </div>
+
+  <footer>
+    Everything on this page is read from <code>data/</code>, written by the tick in the
+    game repository. State hash <span class="num" id="state-hash">—</span>. This page holds
+    no game logic and decides nothing.
+  </footer>
+
+</div>
+<script src="app.js"></script>
+</body>
+</html>
