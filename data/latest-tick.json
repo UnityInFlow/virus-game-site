@@ -1,0 +1,1 @@
+{"tick":1,"tickId":"35199501621","stateHash":"90748add9f65f0bf49694bb3b4151a5c5eb442362f54a382c7630769acfd7218","generatedAt":"35199501621","durations":{"tick.execute_strains.ms":406,"tick.invariants.ms":3,"tick.prepare_strains.ms":2,"tick.resolve.ms":19,"tick.serialize.ms":3,"tick.validate.ms":0},"strainFailures":{"crash":["cptpr-v1"]}}
