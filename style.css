@@ -938,6 +938,49 @@ tbody tr.row[aria-selected='true'] td:first-child {
   gap: var(--space-4);
 }
 
+.history-focus {
+  min-height: 2.5rem;
+  margin-bottom: var(--space-4);
+  padding: var(--space-2) var(--space-3);
+  border-inline-start: 3px solid var(--focus);
+  background: var(--surface-muted);
+  color: var(--ink-soft);
+  font-size: 0.82rem;
+}
+
+.chart-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin: 0 0 var(--space-3);
+}
+
+.chart-controls button {
+  min-height: 2.3rem;
+  border: var(--border-width) solid var(--line-strong);
+  border-radius: var(--radius-small);
+  background: var(--surface-raised);
+  color: var(--ink);
+  cursor: pointer;
+  font: 700 0.68rem/1.2 var(--font-body);
+  padding: var(--space-1) var(--space-2);
+}
+
+.chart-controls button[aria-pressed='false'] {
+  color: var(--ink-soft);
+  text-decoration: line-through;
+}
+
+.chart-table {
+  margin-top: var(--space-3);
+  color: var(--ink-soft);
+  font-size: 0.76rem;
+}
+
+.chart-table table {
+  font-size: inherit;
+}
+
 .chart-pair {
   display: grid;
   gap: var(--space-4);
@@ -971,6 +1014,12 @@ tbody tr.row[aria-selected='true'] td:first-child {
   stroke-linecap: square;
   stroke-linejoin: bevel;
   stroke-width: 2;
+}
+
+.chart-cursor {
+  stroke: var(--ink);
+  stroke-dasharray: 3 3;
+  stroke-width: 1;
 }
 
 .cells-legend {

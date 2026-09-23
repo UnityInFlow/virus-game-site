@@ -203,22 +203,31 @@
               only.
             </p>
           </div>
+          <div class="history-focus" id="history-focus" aria-live="polite"></div>
           <div class="history-grid">
             <section class="chart-panel" aria-labelledby="cells-title">
               <h3 id="cells-title">Cells held, by tick</h3>
+              <div
+                class="chart-controls"
+                id="cells-controls"
+                aria-label="Territory series controls"
+              ></div>
               <div class="chart" id="chart-cells"></div>
               <div class="legend cells-legend" id="cells-legend"></div>
+              <div class="chart-table" id="cells-table"></div>
             </section>
 
             <div class="chart-pair">
               <section class="chart-panel" aria-labelledby="duration-title">
-                <h3 id="duration-title">Tick duration</h3>
+                <h3 id="duration-title">Engine health</h3>
                 <div class="chart" id="chart-duration"></div>
+                <div class="chart-table" id="duration-table"></div>
               </section>
               <section class="chart-panel" aria-labelledby="failures-title">
-                <h3 id="failures-title">Strain failures</h3>
+                <h3 id="failures-title">Actions and outcomes</h3>
                 <div class="chart" id="chart-failures"></div>
                 <p class="muted note" id="failures-note"></p>
+                <div class="chart-table" id="activity-table"></div>
               </section>
             </div>
           </div>
@@ -239,6 +248,20 @@
             <p>
               <b>3. The atlas records.</b> Cells are territory. Active strain entrypoints are public
               strategy; full rules explain the limits.
+            </p>
+            <p>
+              <b>Cells, health and energy.</b> A cell is one square of territory. Health decides
+              whether it survives; living cells gain energy each tick, then spend it on moves. Those
+              values are live-map evidence, not replay history.
+            </p>
+            <p>
+              <b>Moves and failures.</b> Strains may attack a neighbour, spread or replicate into an
+              empty neighbour, reinforce defence, or idle. Invalid, timed-out or crashed proposals
+              fail without stopping everyone else.
+            </p>
+            <p>
+              <b>Read the evidence.</b> Standings rank territory, then kills. The charts count what
+              happened per tick; the replay shows who owned each square. Neither predicts a winner.
             </p>
           </div>
           <a

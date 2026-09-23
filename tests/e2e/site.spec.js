@@ -47,7 +47,7 @@ test('renders the verified desktop/mobile fixture with all main regions and no p
   await expect(page.locator('#player-detail')).toContainText('Alice');
   await expect(page.locator('#how-it-works')).toContainText('Programs propose.');
   await expect(page.getByText('Alice', { exact: true }).first()).toBeVisible();
-  await page.getByRole('button', { name: 'Bob' }).click();
+  await page.locator('#legend').getByRole('button', { name: 'Bob' }).click();
   await expect(page.locator('#player-detail')).toContainText('Bob');
   await page.locator('#map').dispatchEvent('click', { clientX: 0, clientY: 0 });
   expect(errors).toEqual([]);
@@ -133,6 +133,37 @@ test('replays retained ownership with scrub, step, speed, deep links and a retur
   await expect(page.locator('#replay-tick')).toHaveText('Live · tick 2');
   await expect(page.getByRole('application', { name: 'Interactive territory map' })).toBeVisible();
   await expect(page).toHaveURL(/\?player=bob$/);
+});
+
+test('links accessible analytics controls and keyboard chart focus to replay ticks', async ({
+  page,
+}) => {
+  await useFixture(page);
+  await page.goto('/');
+  const territory = page.getByRole('application', { name: 'Cells held by selected players' });
+  await expect(territory).toBeVisible();
+  await expect(page.locator('#history-focus')).toContainText('Focused tick 2');
+  await expect(page.getByRole('table', { name: 'Territory at focused tick' })).toBeVisible();
+  await territory.focus();
+  await territory.press('ArrowLeft');
+  await expect(page.locator('#replay-tick')).toHaveText('Replay · tick 1');
+  await expect(page.locator('#history-focus')).toContainText('Focused tick 1');
+
+  const controls = page.locator('#cells-controls');
+  await controls.getByRole('button', { name: 'none' }).click();
+  await expect(
+    controls.getByRole('button', { name: 'toggle territory series for Alice' }),
+  ).toHaveAttribute('aria-pressed', 'false');
+  await controls.getByRole('button', { name: 'all' }).click();
+  await expect(
+    controls.getByRole('button', { name: 'toggle territory series for Alice' }),
+  ).toHaveAttribute('aria-pressed', 'true');
+  await expect(
+    page.getByRole('application', { name: 'Total tick duration in milliseconds' }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole('application', { name: 'Accepted, rejected and outcome counts per tick' }),
+  ).toBeVisible();
 });
 
 test('keeps the live board usable when a deep link is invalid or replay publication is invalid', async ({
@@ -300,7 +331,7 @@ test('a failed refresh retains the dashboard, focus, and advancing refresh age',
   });
   await page.goto('/');
   await expect(page.getByRole('main')).toBeVisible();
-  const bob = page.getByRole('button', { name: 'Bob' });
+  const bob = page.locator('#legend').getByRole('button', { name: 'Bob' });
   await bob.focus();
   unavailable = true;
   await page.evaluate(() => document.querySelector('#retry-load').click());

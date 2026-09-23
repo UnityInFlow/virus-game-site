@@ -114,7 +114,10 @@ function renderSnapshot(snapshot, refreshedAt) {
     speed: replaySpeed,
     notice: replayNotice,
   });
-  renderCharts(snapshot);
+  renderCharts(snapshot, {
+    focusedTick: replayTick ?? snapshot.map.tick,
+    onSelectTick: setReplayTick,
+  });
   renderedKey = snapshot.key;
 }
 
@@ -129,6 +132,10 @@ function renderReplayFrame() {
     playing: replayPlaying,
     speed: replaySpeed,
     notice: replayNotice,
+  });
+  renderCharts(state.snapshot, {
+    focusedTick: replayTick ?? state.snapshot.map.tick,
+    onSelectTick: setReplayTick,
   });
 }
 
@@ -163,6 +170,7 @@ function announceReplay(message) {
 function setReplayTick(tick, { replace = false, announce = false } = {}) {
   const snapshot = store.getState().snapshot;
   if (!snapshot?.replay || !hasReplayTick(snapshot.replay, tick)) return;
+  if (replayTick === tick) return;
   replayTick = tick;
   replayNotice = '';
   writeReplayPath(tick, { replace });
