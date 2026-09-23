@@ -198,11 +198,12 @@ thead th {
   text-transform: uppercase;
   letter-spacing: .06em;
   color: var(--muted);
-  padding: 0 0 6px;
+  padding: 0 0 6px 10px;
   border-bottom: 1px solid var(--line);
 }
 thead th:first-child, thead th:nth-child(2) { text-align: left; }
-tbody td { padding: 7px 0; border-bottom: 1px solid var(--line); text-align: right; }
+tbody td { padding: 7px 0 7px 10px; border-bottom: 1px solid var(--line); text-align: right; }
+tbody td:first-child, thead th:first-child { padding-left: 0; }
 tbody td:first-child, tbody td:nth-child(2) { text-align: left; }
 tbody tr:last-child td { border-bottom: none; }
 

@@ -462,7 +462,12 @@ function lineChart(node, series, options) {
 
   node.innerHTML = '';
   const points = series.flatMap((s) => s.points);
-  if (points.length < 2) {
+  // Distinct ticks, not total points. Counting points let a two-player chart through on
+  // the game's very first tick — two series of one point each — and drew a pair of axes
+  // with nothing between them, while the single-series charts beside it correctly said
+  // there was not enough history yet. A line needs two ticks whatever the player count.
+  const ticks = new Set(points.map((p) => p[0]));
+  if (ticks.size < 2) {
     node.innerHTML = '<p class="muted" style="margin:0">Not enough ticks yet.</p>';
     return;
   }
@@ -574,8 +579,17 @@ function renderCharts() {
 
   if (failuresOf) {
     const total = rows.reduce((sum, row) => sum + failuresOf(row), 0);
-    el('failures-note').textContent =
-      total === 0 ? 'no strain has failed in the last ' + rows.length + ' ticks' : n(total) + ' in the last ' + rows.length + ' ticks';
+    // Spelled out rather than concatenated: the first published tick read "1 in the last
+    // 1 ticks", directly under a panel saying there was not enough history to plot.
+    if (rows.length === 0) {
+      el('failures-note').textContent = 'No tick has been published yet.';
+    } else {
+      const span = rows.length === 1 ? 'the last tick' : 'the last ' + n(rows.length) + ' ticks';
+      el('failures-note').textContent =
+        total === 0
+          ? 'no strain has failed in ' + span
+          : n(total) + (total === 1 ? ' failure in ' : ' failures in ') + span;
+    }
     lineChart(
       el('chart-failures'),
       [{ colour: warn, bars: true, points: rows.map((row) => [tickOf(row), failuresOf(row)]) }],
