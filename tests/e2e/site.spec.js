@@ -59,6 +59,8 @@ test('keeps a deliberate Atlas hierarchy, persistent theme and a usable 320px la
   await useFixture(page);
   await page.goto('/');
   await expect(page.getByRole('banner')).toBeVisible();
+  await page.getByRole('link', { name: 'skip to the live map' }).focus();
+  await expect(page.getByRole('link', { name: 'skip to the live map' })).toBeVisible();
   await expect(page.getByRole('navigation', { name: 'Game information' })).toBeVisible();
   await expect(page.locator('link[rel="icon"][href="assets/outbreak-mark.svg"]')).toHaveCount(1);
 

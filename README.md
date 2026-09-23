@@ -94,6 +94,11 @@ and mobile viewports. The browser suite intercepts `data/*.json` with checked-in
 it never depends on a live tick. CI runs the same command for every pull request and `main`
 push.
 
+`npm run budget` enforces the authored HTML/CSS/JS, per-generated-document and total-generated
+transfer budgets. `npm run smoke:live` is deliberately separate from CI: it makes **read-only**
+requests to Pages, checks HTTP content types and validates the seven live artifacts as one
+coherent snapshot. Run it after a tick or a Pages deployment; it changes neither repository.
+
 Fixtures live in `tests/fixtures/`. They cover a normal game, a bootstrap/empty game, ten
 players, malformed data, a mixed tick, invalid ownership and a later refresh failure. Keep
 generated production files under `data/` out of tests and out of human-authored PRs.
@@ -123,3 +128,19 @@ job is the only writer of `data/`; a source change here is deployed by merging i
 If a frontend release needs rollback, revert its source commit in this repository. If a data
 publication is missing or stale, investigate the tick/publish workflow in `virus-game`; do
 not repair `data/` by hand.
+
+## Release and failure checklist
+
+After merging site code or after a new tick publishes data, run:
+
+```bash
+npm test
+npm run smoke:live
+```
+
+The browser keeps the last verified snapshot when one refresh fails. A replay or source artifact
+that is missing, stale, malformed or mixed with a different tick disables only that feature and
+leaves the verified live map available with a diagnostic. A stale page response is not a reason
+to edit `data/`: check the game repository's `tick.yml` publish job, wait for its atomic push,
+then re-run the smoke command. Roll a frontend release back by reverting its source commit;
+generated public data rolls forward only from a successful trusted tick.
