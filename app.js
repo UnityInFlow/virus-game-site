@@ -581,11 +581,15 @@ function renderCharts() {
     const total = rows.reduce((sum, row) => sum + failuresOf(row), 0);
     // Spelled out rather than concatenated: the first published tick read "1 in the last
     // 1 ticks", directly under a panel saying there was not enough history to plot.
-    const span = rows.length === 1 ? 'the last tick' : 'the last ' + n(rows.length) + ' ticks';
-    el('failures-note').textContent =
-      total === 0
-        ? 'no strain has failed in ' + span
-        : n(total) + (total === 1 ? ' failure in ' : ' failures in ') + span;
+    if (rows.length === 0) {
+      el('failures-note').textContent = 'No tick has been published yet.';
+    } else {
+      const span = rows.length === 1 ? 'the last tick' : 'the last ' + n(rows.length) + ' ticks';
+      el('failures-note').textContent =
+        total === 0
+          ? 'no strain has failed in ' + span
+          : n(total) + (total === 1 ? ' failure in ' : ' failures in ') + span;
+    }
     lineChart(
       el('chart-failures'),
       [{ colour: warn, bars: true, points: rows.map((row) => [tickOf(row), failuresOf(row)]) }],
