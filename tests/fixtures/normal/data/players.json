@@ -1,0 +1,1 @@
+[{"id":"alice","displayName":"Alice","enabled":true,"cells":2,"kills":1,"delta":1,"strains":[{"id":"alice-v1","enabled":true,"suspended":false,"cells":2,"kills":1}]},{"id":"bob","displayName":"Bob","enabled":true,"cells":1,"kills":0,"delta":0,"strains":[{"id":"bob-v1","enabled":true,"suspended":false,"cells":1,"kills":0}]}]
