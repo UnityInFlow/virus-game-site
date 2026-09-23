@@ -43,7 +43,7 @@ function renderSnapshot(snapshot, refreshedAt) {
   renderHeader(snapshot, refreshedAt);
   renderLeaderboard(snapshot, selection.player, selectPlayer);
   renderLegend(snapshot, selection.player, selectPlayer);
-  renderPlayer(snapshot, selection.player);
+  renderPlayer(snapshot, selection.player, selectPlayer);
   renderMap(snapshot, selection);
   renderCharts(snapshot);
   renderedKey = snapshot.key;

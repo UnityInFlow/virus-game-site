@@ -18,6 +18,7 @@ function responseFor(snapshot) {
     players: snapshot.players,
     leaderboard: snapshot.leaderboard,
     history: snapshot.history,
+    strains: snapshot.strains,
   };
   return async (url) => {
     const name = new URL(url, 'http://fixture.test').pathname

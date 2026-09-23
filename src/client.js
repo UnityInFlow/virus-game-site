@@ -31,13 +31,13 @@ export async function loadSnapshot({
       return response;
     }),
   );
-  const [latest, map, players, leaderboard, history] = await Promise.all(
+  const [latest, map, players, leaderboard, history, strains] = await Promise.all(
     responses.map((response, index) => readJson(response, DOCUMENTS[index])),
   );
-  const snapshot = validateSnapshot({ latest, map, players, leaderboard, history });
+  const snapshot = validateSnapshot({ latest, map, players, leaderboard, history, strains });
   return Object.freeze({
     ...snapshot,
     generated: generatedAt(responses[0], latest),
-    key: JSON.stringify({ latest, map, players, leaderboard, history }),
+    key: JSON.stringify({ latest, map, players, leaderboard, history, strains }),
   });
 }

@@ -6,10 +6,10 @@ const root = new URL('./fixtures/', import.meta.url);
 export async function fixture(name = 'normal') {
   const read = async (file) =>
     JSON.parse(await readFile(new URL(`${name}/data/${file}.json`, root), 'utf8'));
-  const [latest, map, players, leaderboard, history] = await Promise.all(
-    ['latest-tick', 'map', 'players', 'leaderboard', 'history'].map(read),
+  const [latest, map, players, leaderboard, history, strains] = await Promise.all(
+    ['latest-tick', 'map', 'players', 'leaderboard', 'history', 'strains'].map(read),
   );
-  return { latest, map, players, leaderboard, history };
+  return { latest, map, players, leaderboard, history, strains };
 }
 
 export function fixturePath(name, file) {
@@ -63,6 +63,11 @@ export function tenPlayerSnapshot() {
         [2, ids.map(() => 1)],
       ],
     },
+    strains: {
+      version: 1,
+      tick: 2,
+      strains: [],
+    },
   };
 }
 
@@ -114,6 +119,22 @@ export function maximumBoardSnapshot() {
         [1, counts],
         [2, counts],
       ],
+    },
+    strains: {
+      version: 1,
+      tick: 2,
+      strains: players.flatMap((player) =>
+        player.strains.map((strain) => ({
+          id: strain.id,
+          player: player.id,
+          runtime: 'python',
+          apiVersion: 'v1',
+          contentHash: `${player.id.length.toString(16).padStart(2, '0')}${'0'.repeat(62)}`,
+          enabled: strain.enabled,
+          suspended: strain.suspended,
+          source: `# ${player.id}\n`,
+        })),
+      ),
     },
   };
 }

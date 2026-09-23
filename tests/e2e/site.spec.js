@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { fixturePath, maximumBoardSnapshot } from '../fixture.js';
+import { clone, fixture, fixturePath, maximumBoardSnapshot } from '../fixture.js';
 
 async function useFixture(page, name = 'normal') {
   await page.route('**/data/*.json?*', async (route) => {
@@ -18,6 +18,7 @@ async function useSnapshot(page, snapshot) {
     players: snapshot.players,
     leaderboard: snapshot.leaderboard,
     history: snapshot.history,
+    strains: snapshot.strains,
   };
   await page.route('**/data/*.json?*', async (route) => {
     const file = new URL(route.request().url()).pathname.split('/').at(-1).replace('.json', '');
@@ -132,6 +133,71 @@ test('keeps a ten-player 10,000-cell map sharp, bounded and scroll-safe after re
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
     true,
   );
+});
+
+test('inspects current active source safely, copies exact bytes, and supports player navigation', async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'clipboard', {
+      value: {
+        writeText: async (value) => {
+          window.copiedSource = value;
+        },
+      },
+      configurable: true,
+    });
+  });
+  await useFixture(page);
+  await page.goto('/?player=alice');
+  await expect(page.getByRole('tablist', { name: 'Alice strains' })).toBeVisible();
+  await expect(page.locator('.source-view')).toContainText("print('alice')");
+  await expect(page.locator('.source-line__number').first()).toHaveText('1');
+  await page.getByRole('button', { name: 'copy exact source' }).click();
+  await expect(page.locator('#source-copy-status')).toHaveText('Exact current source copied.');
+  expect(await page.evaluate(() => window.copiedSource)).toBe("print('alice')\n");
+  await page.getByRole('button', { name: 'next player' }).click();
+  await expect(page).toHaveURL(/\?player=bob$/);
+  await expect(page.locator('#player-detail')).toContainText('Bob');
+});
+
+test('renders hostile source as inert text and explains unavailable active source', async ({
+  page,
+}) => {
+  const snapshot = clone(await fixture());
+  snapshot.strains.strains[0].source =
+    '<img src=x onerror="window.pwned=1">\u202Every-long\tline\n';
+  snapshot.players[0].strains.push({
+    id: 'alice-v2',
+    enabled: false,
+    suspended: false,
+    cells: 0,
+    kills: 0,
+  });
+  snapshot.strains.strains.push({
+    id: 'alice-v2',
+    player: 'alice',
+    runtime: 'python',
+    apiVersion: 'v1',
+    contentHash: 'c'.repeat(64),
+    enabled: false,
+    suspended: false,
+  });
+  await useSnapshot(page, snapshot);
+  await page.goto('/?player=alice');
+  await expect(page.locator('.source-view')).toContainText('<img src=x');
+  await expect(page.locator('img[src="x"]')).toHaveCount(0);
+  expect(await page.evaluate(() => window.pwned)).toBeUndefined();
+  await page.getByRole('tab', { name: 'alice-v2' }).click();
+  await expect(page.locator('.source-panel')).toContainText(
+    'disabled; inactive source is deliberately not published',
+  );
+  await page.getByRole('tab', { name: 'alice-v2' }).press('ArrowLeft');
+  await expect(page.getByRole('tab', { name: 'alice-v1' })).toHaveAttribute(
+    'aria-selected',
+    'true',
+  );
+  await expect(page.getByRole('tab', { name: 'alice-v1' })).toBeFocused();
 });
 
 test('shows a retryable initial data error instead of a partial dashboard', async ({ page }) => {

@@ -213,8 +213,49 @@ function validateLatest(latest, tick) {
   });
 }
 
+function validateStrains(document, tick, playerIds, playersById) {
+  requireObject(document, 'strains.json');
+  validateVersion(document, 'strains.json');
+  if (document.tick !== tick) fail(`strains tick ${document.tick} does not match map tick ${tick}`);
+  const strains = requireArray(document.strains, 'strains.strains');
+  const ids = new Set();
+  const represented = new Set();
+  strains.forEach((strain, index) => {
+    requireObject(strain, `strains[${index}]`);
+    const id = requireString(strain.id, `strains[${index}].id`);
+    if (ids.has(id)) fail(`strains contains duplicate '${id}'`);
+    ids.add(id);
+    const player = requireString(strain.player, `strains[${index}].player`);
+    if (!playerIds.has(player)) fail(`strain '${id}' belongs to an unknown player`);
+    const playerStrain = playersById.get(player).strains.find((entry) => entry.id === id);
+    if (!playerStrain) fail(`strain '${id}' is not present in players.json`);
+    represented.add(`${player}:${id}`);
+    requireString(strain.runtime, `strain '${id}'.runtime`);
+    requireString(strain.apiVersion, `strain '${id}'.apiVersion`);
+    if (!/^[a-f0-9]{64}$/i.test(requireString(strain.contentHash, `strain '${id}'.contentHash`))) {
+      fail(`strain '${id}' contentHash must be a SHA-256 hex digest`);
+    }
+    if (typeof strain.enabled !== 'boolean' || typeof strain.suspended !== 'boolean') {
+      fail(`strain '${id}' must declare enabled and suspended booleans`);
+    }
+    if (strain.source !== undefined && strain.source !== null) {
+      if (typeof strain.source !== 'string') fail(`strain '${id}' source must be a string`);
+      if (!strain.enabled || strain.suspended)
+        fail(`inactive strain '${id}' must not publish source`);
+    }
+  });
+  playersById.forEach((player) => {
+    player.strains.forEach((strain) => {
+      if (!represented.has(`${player.id}:${strain.id}`)) {
+        fail(`players.json strain '${strain.id}' is absent from strains.json`);
+      }
+    });
+  });
+  return strains;
+}
+
 /** Validate one complete public snapshot before any view receives it. */
-export function validateSnapshot({ latest, map, players, leaderboard, history }) {
+export function validateSnapshot({ latest, map, players, leaderboard, history, strains }) {
   const playerIds = validateMap(map);
   const cellCounts = new Map(map.players.map((id) => [id, 0]));
   map.cells.forEach(([, owner]) => {
@@ -225,5 +266,14 @@ export function validateSnapshot({ latest, map, players, leaderboard, history })
   validateLeaderboard(leaderboard, playerIds, playersById);
   validateHistory(history, map.players, map.tick, playersById);
   validateLatest(latest, map.tick);
-  return Object.freeze({ latest, map, players, leaderboard, history, order: map.players.slice() });
+  const publicStrains = validateStrains(strains, map.tick, playerIds, playersById);
+  return Object.freeze({
+    latest,
+    map,
+    players,
+    leaderboard,
+    history,
+    strains: publicStrains,
+    order: map.players.slice(),
+  });
 }
