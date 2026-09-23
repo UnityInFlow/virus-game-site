@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { PublicDataError, validateSnapshot } from '../../src/contracts.js';
-import { clone, fixture, tenPlayerSnapshot } from '../fixture.js';
+import { clone, fixture, maximumBoardSnapshot, tenPlayerSnapshot } from '../fixture.js';
 
 test('accepts a complete normal public snapshot', async () => {
   const snapshot = validateSnapshot(await fixture());
@@ -12,6 +12,7 @@ test('accepts a complete normal public snapshot', async () => {
 test('accepts the explicit empty-game fixture and all ten players', async () => {
   assert.equal(validateSnapshot(await fixture('empty')).map.tick, 0);
   assert.equal(validateSnapshot(tenPlayerSnapshot()).order.length, 10);
+  assert.equal(validateSnapshot(maximumBoardSnapshot()).map.cells.length, 10_000);
 });
 
 test('rejects malformed JSON shapes, invalid owners, mixed ticks, unknown leaderboard players, and bad history', async () => {

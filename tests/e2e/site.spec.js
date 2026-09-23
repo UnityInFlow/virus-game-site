@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { fixturePath } from '../fixture.js';
+import { fixturePath, maximumBoardSnapshot } from '../fixture.js';
 
 async function useFixture(page, name = 'normal') {
   await page.route('**/data/*.json?*', async (route) => {
@@ -8,6 +8,20 @@ async function useFixture(page, name = 'normal') {
       path: fixturePath(name, file),
       headers: { 'Last-Modified': 'Tue, 23 Sep 2026 10:00:00 GMT' },
     });
+  });
+}
+
+async function useSnapshot(page, snapshot) {
+  const documents = {
+    'latest-tick': snapshot.latest,
+    map: snapshot.map,
+    players: snapshot.players,
+    leaderboard: snapshot.leaderboard,
+    history: snapshot.history,
+  };
+  await page.route('**/data/*.json?*', async (route) => {
+    const file = new URL(route.request().url()).pathname.split('/').at(-1).replace('.json', '');
+    await route.fulfill({ json: documents[file] });
   });
 }
 
@@ -56,6 +70,65 @@ test('keeps a deliberate Atlas hierarchy, persistent theme and a usable 320px la
   await page.setViewportSize({ width: 320, height: 720 });
   await expect(page.locator('#live-map')).toBeVisible();
   await expect(page.locator('#leaderboard-body tr')).toHaveCount(2);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
+    true,
+  );
+});
+
+test('pins live map cells with mouse, touch, keyboard and a coherent shareable selection', async ({
+  page,
+}, testInfo) => {
+  await useFixture(page);
+  await page.goto('/');
+  const map = page.getByRole('application', { name: 'Interactive territory map' });
+  await expect(map).toBeVisible();
+
+  await map.focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(page.locator('#map-announcement')).toContainText('cell 1');
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#cell-inspector-detail')).toContainText('cell 1');
+  await expect(page.locator('#cell-inspector-detail')).toContainText('Bob');
+  await expect(page).toHaveURL(/\?player=bob&cell=1$/);
+
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#cell-inspector-detail')).toContainText('Pin a cell');
+  await expect(page).not.toHaveURL(/[?&](player|cell)=/);
+
+  const box = await map.boundingBox();
+  const point = { x: box.width * 0.25, y: box.height * 0.75 };
+  if (testInfo.project.use.hasTouch) await map.tap({ position: point });
+  else await map.click({ position: point });
+  await expect(page.locator('#cell-inspector-detail')).toContainText('unoccupied');
+  await expect(page).toHaveURL(/\?cell=2$/);
+
+  await page.goto('/?player=bob&cell=3');
+  await expect(page.locator('#cell-inspector-detail')).toContainText('Alice');
+  await expect(page).toHaveURL(/\?player=alice&cell=3$/);
+});
+
+test('keeps a ten-player 10,000-cell map sharp, bounded and scroll-safe after resize', async ({
+  page,
+}) => {
+  await useSnapshot(page, maximumBoardSnapshot());
+  await page.goto('/');
+  const map = page.getByRole('application', { name: 'Interactive territory map' });
+  await expect(page.locator('#legend button')).toHaveCount(10);
+  await expect(map).toBeVisible();
+  const before = await map.evaluate((node) => ({
+    width: node.width,
+    clientWidth: node.clientWidth,
+  }));
+  expect(before.width).toBeGreaterThanOrEqual(before.clientWidth);
+
+  await page.setViewportSize({ width: 320, height: 720 });
+  await expect(map).toBeVisible();
+  await expect.poll(() => map.evaluate((node) => node.width)).not.toBe(before.width);
+  const after = await map.evaluate((node) => ({
+    width: node.width,
+    clientWidth: node.clientWidth,
+  }));
+  expect(after.width).toBeGreaterThanOrEqual(after.clientWidth);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
     true,
   );
