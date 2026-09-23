@@ -138,7 +138,7 @@ export function renderCharts(snapshot) {
       byId('chart-failures'),
       [
         {
-          colour: style.getPropertyValue('--warn').trim(),
+          colour: style.getPropertyValue('--warning').trim(),
           bars: true,
           points: rows.map((row) => [tickOf(row), failuresOf(row)]),
         },
