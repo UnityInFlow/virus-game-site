@@ -89,14 +89,36 @@
                 <h2 id="map-title">The field map</h2>
               </div>
               <p class="map-note">
-                Colour marks ownership; hover a cell for its exact owner, health and energy.
+                Click or tap to pin a live cell. Arrow keys inspect the map without a mouse.
               </p>
             </div>
             <div class="map-wrap">
-              <canvas id="map" role="img" aria-label="game map"></canvas>
+              <canvas
+                id="map"
+                role="application"
+                tabindex="0"
+                aria-describedby="map-summary map-announcement"
+                aria-label="Interactive territory map"
+              ></canvas>
               <div class="tooltip" id="map-tooltip" hidden></div>
             </div>
             <div class="legend" id="legend"></div>
+            <p class="map-key">
+              <b>Map key.</b> Colour and name identify ownership. A pale crosshatch is unoccupied;
+              lower opacity means lower <em>live</em> health; an outline marks your selection.
+            </p>
+            <section class="map-inspector" aria-labelledby="cell-inspector-title">
+              <div class="section-heading section-heading--compact">
+                <div>
+                  <p class="eyebrow">pinned observation</p>
+                  <h3 id="cell-inspector-title">Cell inspector</h3>
+                </div>
+                <button type="button" id="clear-map-selection" hidden>clear selection</button>
+              </div>
+              <div id="cell-inspector-detail"></div>
+            </section>
+            <p class="visually-hidden" id="map-summary"></p>
+            <p class="visually-hidden" id="map-announcement" aria-live="polite"></p>
           </section>
 
           <aside class="roster-workspace" aria-label="Standings and selected player">
