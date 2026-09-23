@@ -1,5 +1,5 @@
-import { DATA_DIRECTORY, DOCUMENTS } from './constants.js';
-import { PublicDataError, validateSnapshot } from './contracts.js';
+import { DATA_DIRECTORY, DOCUMENTS, REPLAY_DOCUMENT } from './constants.js';
+import { PublicDataError, validateReplay, validateSnapshot } from './contracts.js';
 import { generatedAt } from './format.js';
 
 function documentUrl(name, token) {
@@ -35,9 +35,20 @@ export async function loadSnapshot({
     responses.map((response, index) => readJson(response, DOCUMENTS[index])),
   );
   const snapshot = validateSnapshot({ latest, map, players, leaderboard, history, strains });
+  let replay = null;
+  let replayProblem = null;
+  try {
+    const response = await fetchImpl(documentUrl(REPLAY_DOCUMENT, token), { cache: 'no-store' });
+    if (!response.ok) throw new PublicDataError(`replay.json returned HTTP ${response.status}`);
+    replay = validateReplay(await readJson(response, REPLAY_DOCUMENT), snapshot);
+  } catch (error) {
+    replayProblem = error instanceof Error ? error.message : 'replay.json could not be loaded';
+  }
   return Object.freeze({
     ...snapshot,
+    replay,
+    replayProblem,
     generated: generatedAt(responses[0], latest),
-    key: JSON.stringify({ latest, map, players, leaderboard, history, strains }),
+    key: JSON.stringify({ latest, map, players, leaderboard, history, strains, replay }),
   });
 }

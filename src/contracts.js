@@ -254,6 +254,142 @@ function validateStrains(document, tick, playerIds, playersById) {
   return strains;
 }
 
+function replayOwner(owner, players, name) {
+  if (owner === null) return null;
+  if (!isNonNegativeInteger(owner) || owner >= players.length) {
+    fail(`${name} has an unknown owner index`);
+  }
+  return owner;
+}
+
+/**
+ * Validate the optional replay against a snapshot that has already passed the
+ * ordinary public-data contract.  It returns a compact, immutable adapter with
+ * replay owner indices translated to the current map player order.
+ */
+export function validateReplay(document, snapshot) {
+  requireObject(document, 'replay.json');
+  if (document.version !== 1) fail(`replay has unsupported version '${document.version}'`);
+  const width = requireInteger(document.width, 'replay.width');
+  const height = requireInteger(document.height, 'replay.height');
+  if (width !== snapshot.map.width || height !== snapshot.map.height) {
+    fail('replay dimensions do not match map.json');
+  }
+  const startTick = requireInteger(document.startTick, 'replay.startTick');
+  const endTick = requireInteger(document.endTick, 'replay.endTick');
+  if (endTick < startTick) fail('replay.endTick must not precede replay.startTick');
+  if (endTick !== snapshot.map.tick) fail('replay end tick does not match map.json');
+  if (typeof document.truncated !== 'boolean') fail('replay.truncated must be boolean');
+
+  const players = requireArray(document.players, 'replay.players');
+  uniqueStrings(players, 'replay.players');
+  const playerToMapOwner = players.map((id) => snapshot.order.indexOf(id));
+  if (playerToMapOwner.some((owner) => owner < 0) || players.length !== snapshot.order.length) {
+    fail('replay players do not match map.json player lookup');
+  }
+
+  const cellCount = width * height;
+  const initial = requireArray(document.initial, 'replay.initial');
+  if (initial.length !== cellCount) fail(`replay.initial must contain ${cellCount} cells`);
+  initial.forEach((owner, index) => replayOwner(owner, players, `replay.initial[${index}]`));
+
+  const columns = requireArray(document.columns, 'replay.columns');
+  uniqueStrings(columns, 'replay.columns');
+  const cellsColumn = columns.indexOf('cells');
+  if (cellsColumn < 0) fail('replay.columns requires cells');
+
+  const frames = requireArray(document.frames, 'replay.frames');
+  if (frames.length === 0 && endTick !== startTick) fail('replay has no frame for its end tick');
+  let previousTick = startTick;
+  const reconstructed = initial.slice();
+  const preparedFrames = frames.map((frame, frameIndex) => {
+    requireArray(frame, `replay.frames[${frameIndex}]`);
+    if (frame.length !== 3)
+      fail(`replay.frames[${frameIndex}] must contain tick, changes and metrics`);
+    const tick = requireInteger(frame[0], `replay.frames[${frameIndex}].tick`);
+    if (tick <= previousTick || tick > endTick)
+      fail('replay frame ticks must be ordered and retained');
+    previousTick = tick;
+    const seenCells = new Set();
+    const changes = requireArray(frame[1], `replay.frames[${frameIndex}].changes`).map(
+      (change, changeIndex) => {
+        requireArray(change, `replay.frames[${frameIndex}].changes[${changeIndex}]`);
+        if (change.length !== 2) fail(`replay frame ${tick} changes must have cell and owner`);
+        const cellId = requireInteger(change[0], `replay frame ${tick} cell`);
+        if (cellId >= cellCount || seenCells.has(cellId))
+          fail(`replay frame ${tick} has invalid cell change`);
+        seenCells.add(cellId);
+        const owner = replayOwner(change[1], players, `replay frame ${tick} owner`);
+        reconstructed[cellId] = owner;
+        return Object.freeze([cellId, owner]);
+      },
+    );
+    const metrics = requireArray(frame[2], `replay.frames[${frameIndex}].metrics`);
+    if (metrics.length !== columns.length)
+      fail(`replay frame ${tick} metrics have the wrong width`);
+    metrics.forEach((value, columnIndex) => {
+      if (columnIndex === cellsColumn) {
+        requireArray(value, `replay frame ${tick} cells`);
+        if (value.length !== players.length)
+          fail(`replay frame ${tick} cells has the wrong player count`);
+        value.forEach((count, owner) =>
+          requireInteger(count, `replay frame ${tick} cells[${owner}]`),
+        );
+      } else {
+        requireNonNegativeFinite(value, `replay frame ${tick} ${columns[columnIndex]}`);
+      }
+    });
+    const expectedCounts = players.map((_, owner) =>
+      reconstructed.reduce((count, cellOwner) => count + Number(cellOwner === owner), 0),
+    );
+    if (metrics[cellsColumn].some((count, owner) => count !== expectedCounts[owner])) {
+      fail(`replay frame ${tick} cells do not match its ownership changes`);
+    }
+    return Object.freeze([tick, Object.freeze(changes), Object.freeze(metrics.slice())]);
+  });
+  if (previousTick !== endTick) fail('replay does not retain its end tick');
+
+  const mapOwners = snapshot.map.cells.map(([, owner]) => owner);
+  const translatedFinalOwners = reconstructed.map((owner) =>
+    owner === null ? null : playerToMapOwner[owner],
+  );
+  if (translatedFinalOwners.some((owner, index) => owner !== mapOwners[index])) {
+    fail('replay final ownership does not match map.json');
+  }
+  const finalCells = preparedFrames.at(-1)?.[2][cellsColumn];
+  if (finalCells) {
+    players.forEach((id, owner) => {
+      if (finalCells[owner] !== snapshot.players.find((player) => player.id === id).cells) {
+        fail(`replay final cells do not match players.json for '${id}'`);
+      }
+    });
+  }
+
+  return Object.freeze({
+    startTick,
+    endTick,
+    truncated: document.truncated,
+    players: Object.freeze(players.slice()),
+    columns: Object.freeze(columns.slice()),
+    initial: Object.freeze(
+      initial.map((owner) => (owner === null ? null : playerToMapOwner[owner])),
+    ),
+    frames: Object.freeze(
+      preparedFrames.map(([tick, changes, metrics]) =>
+        Object.freeze([
+          tick,
+          Object.freeze(
+            changes.map(([cellId, owner]) =>
+              Object.freeze([cellId, owner === null ? null : playerToMapOwner[owner]]),
+            ),
+          ),
+          metrics,
+        ]),
+      ),
+    ),
+  });
+}
+
 /** Validate one complete public snapshot before any view receives it. */
 export function validateSnapshot({ latest, map, players, leaderboard, history, strains }) {
   const playerIds = validateMap(map);

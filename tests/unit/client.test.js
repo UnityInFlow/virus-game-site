@@ -19,6 +19,7 @@ function responseFor(snapshot) {
     leaderboard: snapshot.leaderboard,
     history: snapshot.history,
     strains: snapshot.strains,
+    replay: snapshot.replay,
   };
   return async (url) => {
     const name = new URL(url, 'http://fixture.test').pathname
@@ -48,4 +49,15 @@ test('a mixed-tick refresh is rejected and cannot replace the known-good snapsho
   assert.equal(store.getState().phase, 'degraded');
   assert.equal(store.getState().snapshot, knownGood);
   assert.equal(states.at(-1).snapshot, knownGood);
+});
+
+test('an incoherent optional replay is isolated while the verified live board remains available', async () => {
+  const source = await fixture();
+  source.replay.frames.at(-1)[1][0][1] = null;
+  source.replay.frames.at(-1)[2][0][0] = 1;
+  const snapshot = await loadSnapshot({ fetchImpl: responseFor(source), token: 'fixture' });
+
+  assert.equal(snapshot.map.tick, 2);
+  assert.equal(snapshot.replay, null);
+  assert.match(snapshot.replayProblem, /final ownership/);
 });

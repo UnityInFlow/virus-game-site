@@ -1,0 +1,1 @@
+{"version":1,"width":2,"height":2,"startTick":0,"endTick":0,"truncated":false,"players":["alice","bob"],"columns":["cells","totalLivingCells","accepted","rejected","kills","deaths","spreads","durationMs","strainFailures"],"initial":[null,null,null,null],"frames":[]}
