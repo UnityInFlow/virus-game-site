@@ -81,7 +81,7 @@ function validateMap(map) {
   return playerIds;
 }
 
-function validatePlayers(players, playerIds) {
+function validatePlayers(players, playerIds, cellCounts) {
   requireArray(players, 'players.json');
   const ids = new Set();
   players.forEach((player, index) => {
@@ -93,6 +93,9 @@ function validatePlayers(players, playerIds) {
     requireString(player.displayName, `players[${index}].displayName`);
     if (typeof player.enabled !== 'boolean') fail(`players[${index}].enabled must be boolean`);
     requireInteger(player.cells, `players[${index}].cells`);
+    if (player.cells !== (cellCounts.get(id) || 0)) {
+      fail(`player '${id}' cells do not match map ownership`);
+    }
     requireInteger(player.kills, `players[${index}].kills`);
     if (!Number.isInteger(player.delta)) fail(`players[${index}].delta must be an integer`);
     requireArray(player.strains, `players[${index}].strains`);
@@ -116,7 +119,7 @@ function validatePlayers(players, playerIds) {
     fail('players.json does not contain the complete map player set');
 }
 
-function validateLeaderboard(leaderboard, playerIds) {
+function validateLeaderboard(leaderboard, playerIds, players) {
   requireArray(leaderboard, 'leaderboard.json');
   const ids = new Set();
   leaderboard.forEach((entry, index) => {
@@ -128,11 +131,15 @@ function validateLeaderboard(leaderboard, playerIds) {
     requireInteger(entry.cells, `leaderboard '${id}'.cells`);
     requireNonNegativeFinite(entry.percentage, `leaderboard '${id}'.percentage`);
     if (!Number.isInteger(entry.delta)) fail(`leaderboard '${id}'.delta must be an integer`);
+    const player = players.get(id);
+    if (entry.cells !== player.cells || entry.delta !== player.delta) {
+      fail(`leaderboard '${id}' does not match players.json`);
+    }
   });
   if (ids.size !== playerIds.size) fail('leaderboard does not contain the complete map player set');
 }
 
-function validateHistory(history, playerOrder, expectedTick) {
+function validateHistory(history, playerOrder, expectedTick, playersById) {
   requireObject(history, 'history.json');
   validateVersion(history, 'history.json');
   const players = requireArray(history.players, 'history.players');
@@ -172,6 +179,20 @@ function validateHistory(history, playerOrder, expectedTick) {
   if (expectedTick > 0 && latestHistoryTick !== expectedTick) {
     fail(`history latest tick ${latestHistoryTick} does not match map tick ${expectedTick}`);
   }
+  const latestCells = ticks.at(-1)?.[cellsIndex];
+  const previousCells = ticks.at(-2)?.[cellsIndex];
+  if (latestCells) {
+    playerOrder.forEach((id, index) => {
+      const player = playersById.get(id);
+      if (latestCells[index] !== player.cells) {
+        fail(`history cells for '${id}' do not match players.json`);
+      }
+      const expectedDelta = previousCells ? latestCells[index] - previousCells[index] : 0;
+      if (player.delta !== expectedDelta) {
+        fail(`player '${id}' delta does not match history`);
+      }
+    });
+  }
 }
 
 function validateLatest(latest, tick) {
@@ -195,9 +216,14 @@ function validateLatest(latest, tick) {
 /** Validate one complete public snapshot before any view receives it. */
 export function validateSnapshot({ latest, map, players, leaderboard, history }) {
   const playerIds = validateMap(map);
-  validatePlayers(players, playerIds);
-  validateLeaderboard(leaderboard, playerIds);
-  validateHistory(history, map.players, map.tick);
+  const cellCounts = new Map(map.players.map((id) => [id, 0]));
+  map.cells.forEach(([, owner]) => {
+    if (owner !== null) cellCounts.set(map.players[owner], cellCounts.get(map.players[owner]) + 1);
+  });
+  validatePlayers(players, playerIds, cellCounts);
+  const playersById = new Map(players.map((player) => [player.id, player]));
+  validateLeaderboard(leaderboard, playerIds, playersById);
+  validateHistory(history, map.players, map.tick, playersById);
   validateLatest(latest, map.tick);
   return Object.freeze({ latest, map, players, leaderboard, history, order: map.players.slice() });
 }

@@ -23,18 +23,34 @@ test('renders the verified desktop/mobile fixture with all main regions and no p
   await expect(page.locator('#leaderboard-body tr')).toHaveCount(2);
   await expect(page.locator('#map')).toBeVisible();
   await expect(page.locator('#chart-cells svg')).toBeVisible();
+  await expect(page.locator('#chart-duration svg')).toBeVisible();
+  await expect(page.locator('#chart-failures svg')).toBeVisible();
+  await expect(page.locator('#player-detail')).toContainText('Alice');
   await expect(page.getByText('Alice', { exact: true }).first()).toBeVisible();
+  await page.getByRole('button', { name: 'Bob' }).click();
+  await expect(page.locator('#player-detail')).toContainText('Bob');
+  await page.locator('#map').dispatchEvent('click', { clientX: 0, clientY: 0 });
   expect(errors).toEqual([]);
 });
 
 test('shows a retryable initial data error instead of a partial dashboard', async ({ page }) => {
-  await page.route('**/data/latest-tick.json?*', (route) =>
-    route.fulfill({ status: 503, body: 'unavailable' }),
-  );
+  let unavailable = true;
+  await page.route('**/data/*.json?*', async (route) => {
+    const file = new URL(route.request().url()).pathname.split('/').at(-1).replace('.json', '');
+    if (unavailable && file === 'latest-tick') {
+      await route.fulfill({ status: 503, body: 'unavailable' });
+      return;
+    }
+    await route.fulfill({ path: fixturePath('normal', file) });
+  });
   await page.goto('/');
   await expect(page.getByText('Could not load public game data.')).toBeVisible();
   await expect(page.getByRole('button', { name: 'retry' })).toBeVisible();
   await expect(page.getByRole('main')).toBeHidden();
+  unavailable = false;
+  await page.getByRole('button', { name: 'retry' }).click();
+  await expect(page.getByRole('main')).toBeVisible();
+  await expect(page.locator('#tick-number')).toHaveText('tick 2');
 });
 
 test('rejects malformed fixture JSON before a dashboard can render', async ({ page }) => {
@@ -54,4 +70,32 @@ test('renders the explicit empty-game state', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByText('No tick has been published yet.')).toBeVisible();
   await expect(page.getByRole('main')).toBeHidden();
+  await page.setViewportSize({ width: 700, height: 700 });
+  await expect(page.getByRole('main')).toBeHidden();
+});
+
+test('a failed refresh retains the dashboard, focus, and advancing refresh age', async ({
+  page,
+}) => {
+  let unavailable = false;
+  await page.route('**/data/*.json?*', async (route) => {
+    const file = new URL(route.request().url()).pathname.split('/').at(-1).replace('.json', '');
+    if (unavailable && file === 'latest-tick') {
+      await route.fulfill({ status: 503, body: 'unavailable' });
+      return;
+    }
+    await route.fulfill({ path: fixturePath('normal', file) });
+  });
+  await page.goto('/');
+  await expect(page.getByRole('main')).toBeVisible();
+  const bob = page.getByRole('button', { name: 'Bob' });
+  await bob.focus();
+  unavailable = true;
+  await page.evaluate(() => document.querySelector('#retry-load').click());
+  await expect(page.getByText('Showing the last verified tick.')).toBeVisible();
+  await expect(bob).toBeFocused();
+  await expect(page.locator('#last-refreshed')).not.toHaveText('refreshed 0s ago', {
+    timeout: 2_500,
+  });
+  await expect(page.getByRole('main')).toBeVisible();
 });

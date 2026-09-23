@@ -44,6 +44,15 @@ test('rejects malformed JSON shapes, invalid owners, mixed ticks, unknown leader
     (value) => {
       value.map.version = 2;
     },
+    (value) => {
+      value.players[0].cells += 1;
+    },
+    (value) => {
+      value.leaderboard[0].delta += 1;
+    },
+    (value) => {
+      value.history.ticks.at(-1)[1][0] += 1;
+    },
   ];
   for (const mutate of cases) {
     const broken = clone(base);
