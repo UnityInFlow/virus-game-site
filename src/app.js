@@ -10,7 +10,7 @@ import { renderPlayer } from './views/player.js';
 import { renderStatus } from './views/status.js';
 
 let selected = null;
-let rendered = null;
+let renderedKey = null;
 
 function preferredPlayer(snapshot) {
   if (selected && snapshot.players.some((player) => player.id === selected)) return selected;
@@ -26,7 +26,7 @@ function renderSnapshot(snapshot, refreshedAt) {
   renderPlayer(snapshot, selected);
   renderMap(snapshot, selected);
   renderCharts(snapshot);
-  rendered = snapshot;
+  renderedKey = snapshot.key;
 }
 
 function selectPlayer(id) {
@@ -41,8 +41,8 @@ function onStateChange(state) {
     byId('content').hidden = true;
     return;
   }
-  if (state.snapshot !== rendered) renderSnapshot(state.snapshot, state.refreshedAt);
-  else if (state.phase === 'live') renderHeader(state.snapshot, state.refreshedAt);
+  if (state.snapshot.key !== renderedKey) renderSnapshot(state.snapshot, state.refreshedAt);
+  else renderHeader(state.snapshot, state.refreshedAt);
 }
 
 const store = createSnapshotStore({ load: loadSnapshot, onChange: onStateChange });
@@ -51,20 +51,26 @@ byId('retry-load').addEventListener('click', () => store.refresh({ retry: true }
 bindMap(selectPlayer);
 
 let resizeTimer = null;
+function renderCurrentSnapshot() {
+  const state = store.getState();
+  if (!state.snapshot || state.phase === 'empty') return;
+  renderSnapshot(state.snapshot, state.refreshedAt);
+}
+
 window.addEventListener('resize', () => {
   window.clearTimeout(resizeTimer);
   resizeTimer = window.setTimeout(() => {
-    const snapshot = store.getState().snapshot;
-    if (snapshot) renderSnapshot(snapshot, store.getState().refreshedAt);
+    renderCurrentSnapshot();
   }, 120);
 });
 
 const scheme = window.matchMedia('(prefers-color-scheme: dark)');
-const repaint = () => {
-  const snapshot = store.getState().snapshot;
-  if (snapshot) renderSnapshot(snapshot, store.getState().refreshedAt);
-};
+const repaint = () => renderCurrentSnapshot();
 if (scheme.addEventListener) scheme.addEventListener('change', repaint);
 
 store.refresh();
 window.setInterval(() => store.refresh(), POLL_MS);
+window.setInterval(() => {
+  const state = store.getState();
+  if (state.snapshot && state.phase !== 'empty') renderHeader(state.snapshot, state.refreshedAt);
+}, 1000);

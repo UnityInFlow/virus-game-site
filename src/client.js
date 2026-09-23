@@ -35,5 +35,9 @@ export async function loadSnapshot({
     responses.map((response, index) => readJson(response, DOCUMENTS[index])),
   );
   const snapshot = validateSnapshot({ latest, map, players, leaderboard, history });
-  return Object.freeze({ ...snapshot, generated: generatedAt(responses[0], latest) });
+  return Object.freeze({
+    ...snapshot,
+    generated: generatedAt(responses[0], latest),
+    key: JSON.stringify({ latest, map, players, leaderboard, history }),
+  });
 }

@@ -104,6 +104,7 @@ export function bindMap(onSelect) {
   });
   canvas.addEventListener('click', (event) => {
     const cell = cellAt(event);
-    if (cell?.[1] !== null) onSelectPlayer(current.order[cell[1]]);
+    if (!cell || cell[1] === null) return;
+    onSelectPlayer(current.order[cell[1]]);
   });
 }
