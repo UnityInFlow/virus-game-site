@@ -11,6 +11,16 @@ export default defineConfig({
   projects: [
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
     { name: 'mobile-chromium', use: { ...devices['Pixel 5'] } },
+    { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
+    {
+      name: 'mobile-firefox',
+      use: { ...devices['Desktop Firefox'], viewport: { width: 390, height: 844 }, isMobile: true },
+    },
+    { name: 'webkit', use: { ...devices['Desktop Safari'] } },
+    {
+      name: 'mobile-webkit',
+      use: { ...devices['Desktop Safari'], viewport: { width: 390, height: 844 }, isMobile: true },
+    },
   ],
   webServer: {
     command: 'node tests/server.js',
