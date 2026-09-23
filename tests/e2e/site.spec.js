@@ -19,6 +19,7 @@ async function useSnapshot(page, snapshot) {
     leaderboard: snapshot.leaderboard,
     history: snapshot.history,
     strains: snapshot.strains,
+    replay: snapshot.replay,
   };
   await page.route('**/data/*.json?*', async (route) => {
     const file = new URL(route.request().url()).pathname.split('/').at(-1).replace('.json', '');
@@ -106,6 +107,50 @@ test('pins live map cells with mouse, touch, keyboard and a coherent shareable s
   await page.goto('/?player=bob&cell=3');
   await expect(page.locator('#cell-inspector-detail')).toContainText('Alice');
   await expect(page).toHaveURL(/\?player=alice&cell=3$/);
+});
+
+test('replays retained ownership with scrub, step, speed, deep links and a return to live', async ({
+  page,
+}) => {
+  await useFixture(page);
+  await page.goto('/?player=bob&tick=1');
+  await expect(page.locator('#replay-tick')).toHaveText('Replay · tick 1');
+  await expect(page.getByRole('application', { name: 'Historical ownership map' })).toBeVisible();
+  await expect(page.locator('#map-key')).toContainText('live health and energy are unavailable');
+  await expect(page.getByLabel('published tick')).toHaveAttribute('aria-valuetext', 'tick 1 of 2');
+
+  await page.getByRole('button', { name: 'next replay tick' }).click();
+  await expect(page.locator('#replay-tick')).toHaveText('Replay · tick 2');
+  await expect(page).toHaveURL(/tick=2/);
+  await expect(page).toHaveURL(/player=bob/);
+
+  await page.getByLabel('speed').selectOption('4');
+  await page.getByRole('button', { name: 'play replay' }).click();
+  await expect(page.locator('#replay-tick')).toHaveText('Replay · tick 0');
+  await expect(page.locator('#replay-tick')).toHaveText('Replay · tick 2', { timeout: 2_000 });
+
+  await page.getByRole('button', { name: 'return to live' }).click();
+  await expect(page.locator('#replay-tick')).toHaveText('Live · tick 2');
+  await expect(page.getByRole('application', { name: 'Interactive territory map' })).toBeVisible();
+  await expect(page).toHaveURL(/\?player=bob$/);
+});
+
+test('keeps the live board usable when a deep link is invalid or replay publication is invalid', async ({
+  page,
+}) => {
+  await useFixture(page);
+  await page.goto('/?tick=99');
+  await expect(page.getByRole('main')).toBeVisible();
+  await expect(page.locator('#replay-status')).toContainText('Requested tick 99 is not retained');
+  await expect(page).not.toHaveURL(/[?&]tick=/);
+
+  await page.route('**/data/replay.json?*', (route) =>
+    route.fulfill({ contentType: 'application/json', body: '{not valid JSON' }),
+  );
+  await page.goto('/');
+  await expect(page.getByRole('main')).toBeVisible();
+  await expect(page.locator('#replay-status')).toContainText('Replay unavailable');
+  await expect(page.getByRole('button', { name: 'play replay' })).toBeDisabled();
 });
 
 test('keeps a ten-player 10,000-cell map sharp, bounded and scroll-safe after resize', async ({

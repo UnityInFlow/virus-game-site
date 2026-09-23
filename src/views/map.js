@@ -8,6 +8,7 @@ const context = canvas.getContext('2d');
 let geometry = null;
 let current = null;
 let selection = Object.freeze({ player: null, cell: null });
+let mode = Object.freeze({ historical: false });
 let cursorId = 0;
 let callbacks = { onPinCell: () => {}, onClearSelection: () => {}, onResize: () => {} };
 let resizeObserver = null;
@@ -34,6 +35,9 @@ function describeCell(cell) {
   const { x, y } = coordinatesFor(id);
   const owner = ownerFor(cell);
   if (!owner) return `cell ${id}, column ${x}, row ${y}: unoccupied`;
+  if (mode.historical) {
+    return `cell ${id}, column ${x}, row ${y}: ${playerName(current, owner)}, historical ownership; live health and energy unavailable`;
+  }
   const healthState = health === 0 ? 'inert' : `${health} health`;
   return `cell ${id}, column ${x}, row ${y}: ${playerName(current, owner)}, ${healthState}, ${energy} energy`;
 }
@@ -82,8 +86,8 @@ function drawMap(style) {
     const y = geometry.offsetY + row * geometry.cellSize;
     const dimmed = selectedIndex >= 0 && owner !== null && owner !== selectedIndex;
     context.fillStyle = owner === null ? empty : colours[owner] || '#888';
-    context.globalAlpha =
-      owner === null ? 1 : (dimmed ? 0.18 : 1) * (0.28 + 0.72 * Math.min(1, health / 100));
+    const healthOpacity = mode.historical ? 1 : 0.28 + 0.72 * Math.min(1, health / 100);
+    context.globalAlpha = owner === null ? 1 : (dimmed ? 0.18 : 1) * healthOpacity;
     context.fillRect(x + gap / 2, y + gap / 2, geometry.cellSize - gap, geometry.cellSize - gap);
 
     if (owner === null && geometry.cellSize >= 8) {
@@ -96,7 +100,7 @@ function drawMap(style) {
       context.lineTo(x + geometry.cellSize - 1, y + 1);
       context.stroke();
       context.restore();
-    } else if (health === 0 && geometry.cellSize >= 6) {
+    } else if (!mode.historical && health === 0 && geometry.cellSize >= 6) {
       context.save();
       context.strokeStyle = warning;
       context.globalAlpha = 0.85;
@@ -152,10 +156,29 @@ function renderInspector() {
   );
   const facts = element('dl', { className: 'map-facts' });
   facts.append(
-    fact('status', owner ? (health === 0 ? 'claimed, inert' : 'occupied') : 'unoccupied'),
+    fact(
+      'status',
+      owner
+        ? mode.historical
+          ? 'historically claimed'
+          : health === 0
+            ? 'claimed, inert'
+            : 'occupied'
+        : 'unoccupied',
+    ),
   );
-  facts.append(fact('live health', owner ? String(health) : 'not applicable'));
-  facts.append(fact('live energy', owner ? String(energy) : 'not applicable'));
+  facts.append(
+    fact(
+      'live health',
+      owner ? (mode.historical ? 'unavailable in replay' : String(health)) : 'not applicable',
+    ),
+  );
+  facts.append(
+    fact(
+      'live energy',
+      owner ? (mode.historical ? 'unavailable in replay' : String(energy)) : 'not applicable',
+    ),
+  );
   detail.append(facts);
   if (!owner) {
     detail.append(
@@ -200,9 +223,33 @@ function renderSummary() {
     selection.cell === null
       ? 'No cell pinned.'
       : `Pinned ${describeCell(cellFor(selection.cell))}.`;
+  const timing = mode.historical
+    ? `Historical ownership at tick ${current.map.tick}; live health and energy are unavailable.`
+    : 'Live ownership, health and energy.';
   byId('map-summary').textContent =
-    `${current.map.width} by ${current.map.height} interactive field map. ${occupied} occupied cells and ${empty} unoccupied cells. ${selected}`;
-  canvas.setAttribute('aria-label', 'Interactive territory map. Use arrow keys to inspect cells.');
+    `${current.map.width} by ${current.map.height} interactive field map. ${timing} ${occupied} occupied cells and ${empty} unoccupied cells. ${selected}`;
+  byId('map-eyebrow').textContent = mode.historical ? 'historical territory' : 'live territory';
+  byId('map-title').textContent = mode.historical
+    ? `The field map · replay tick ${current.map.tick}`
+    : 'The field map';
+  byId('map-note').textContent = mode.historical
+    ? 'Click or tap to pin historical ownership. Live health and energy are not retained in replay.'
+    : 'Click or tap to pin a live cell. Arrow keys inspect the map without a mouse.';
+  canvas.setAttribute(
+    'aria-label',
+    mode.historical
+      ? 'Historical ownership map. Use arrow keys to inspect cells.'
+      : 'Interactive territory map. Use arrow keys to inspect cells.',
+  );
+  const key = clear(byId('map-key'));
+  key.append(element('b', { text: 'Map key.' }));
+  key.append(
+    textNode(
+      mode.historical
+        ? ' Colour and name identify historical ownership. A pale crosshatch is unoccupied; live health and energy are unavailable in replay.'
+        : ' Colour and name identify ownership. A pale crosshatch is unoccupied; lower opacity means lower live health; an outline marks your selection.',
+    ),
+  );
 }
 
 function announce(text) {
@@ -250,7 +297,7 @@ function handleKeydown(event) {
   if (movement.includes(event.key)) {
     event.preventDefault();
     cursorId = moveCellCursor(cursorId, event.key, current.map.width, current.map.height);
-    renderMap(current, selection);
+    renderMap(current, selection, mode);
     announce(describeCell(cellFor(cursorId)));
     return;
   }
@@ -268,9 +315,10 @@ function handleKeydown(event) {
 }
 
 /** Render only on data, selection, size, or theme changes; pointer moves only update the tooltip. */
-export function renderMap(snapshot, nextSelection) {
+export function renderMap(snapshot, nextSelection, nextMode = {}) {
   current = snapshot;
   selection = nextSelection;
+  mode = Object.freeze({ historical: Boolean(nextMode.historical) });
   const cssWidth = canvas.clientWidth;
   if (!cssWidth) return;
   geometry = createMapGeometry({
@@ -302,12 +350,12 @@ export function bindMap(nextCallbacks) {
   canvas.addEventListener('keydown', handleKeydown);
   canvas.addEventListener('focus', () => {
     if (current) {
-      renderMap(current, selection);
+      renderMap(current, selection, mode);
       announce(describeCell(cellFor(cursorId)));
     }
   });
   canvas.addEventListener('blur', () => {
-    if (current) renderMap(current, selection);
+    if (current) renderMap(current, selection, mode);
   });
   resizeObserver = new ResizeObserver(() => callbacks.onResize());
   resizeObserver.observe(canvas.parentElement);

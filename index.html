@@ -85,10 +85,10 @@
           <section class="map-panel" id="live-map" aria-labelledby="map-title">
             <div class="section-heading">
               <div>
-                <p class="eyebrow">live territory</p>
+                <p class="eyebrow" id="map-eyebrow">live territory</p>
                 <h2 id="map-title">The field map</h2>
               </div>
-              <p class="map-note">
+              <p class="map-note" id="map-note">
                 Click or tap to pin a live cell. Arrow keys inspect the map without a mouse.
               </p>
             </div>
@@ -103,10 +103,46 @@
               <div class="tooltip" id="map-tooltip" hidden></div>
             </div>
             <div class="legend" id="legend"></div>
-            <p class="map-key">
+            <p class="map-key" id="map-key">
               <b>Map key.</b> Colour and name identify ownership. A pale crosshatch is unoccupied;
               lower opacity means lower <em>live</em> health; an outline marks your selection.
             </p>
+            <section class="replay-panel" id="replay-panel" aria-labelledby="replay-title" hidden>
+              <div class="section-heading section-heading--compact">
+                <div>
+                  <p class="eyebrow">season evidence</p>
+                  <h3 id="replay-title">Replay the spread</h3>
+                </div>
+                <strong class="num" id="replay-tick">Live</strong>
+              </div>
+              <div class="replay-controls" aria-label="Replay controls">
+                <button type="button" id="replay-first" aria-label="first retained tick">
+                  first
+                </button>
+                <button type="button" id="replay-previous" aria-label="previous replay tick">
+                  previous
+                </button>
+                <button type="button" id="replay-play" aria-label="play replay">play</button>
+                <button type="button" id="replay-next" aria-label="next replay tick">next</button>
+                <button type="button" id="replay-last" aria-label="last replay tick">last</button>
+                <label class="replay-speed" for="replay-speed"
+                  >speed
+                  <select id="replay-speed">
+                    <option value="0.5">0.5×</option>
+                    <option value="1">1×</option>
+                    <option value="2">2×</option>
+                    <option value="4">4×</option>
+                  </select>
+                </label>
+                <button type="button" id="replay-return-live">return to live</button>
+              </div>
+              <label class="replay-scrubber" for="replay-scrubber"
+                >published tick
+                <input id="replay-scrubber" type="range" min="0" max="0" value="0" />
+              </label>
+              <p class="muted note" id="replay-status"></p>
+              <p class="visually-hidden" id="replay-announcement" aria-live="polite"></p>
+            </section>
             <section class="map-inspector" aria-labelledby="cell-inspector-title">
               <div class="section-heading section-heading--compact">
                 <div>

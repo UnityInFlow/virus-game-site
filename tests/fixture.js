@@ -6,10 +6,10 @@ const root = new URL('./fixtures/', import.meta.url);
 export async function fixture(name = 'normal') {
   const read = async (file) =>
     JSON.parse(await readFile(new URL(`${name}/data/${file}.json`, root), 'utf8'));
-  const [latest, map, players, leaderboard, history, strains] = await Promise.all(
-    ['latest-tick', 'map', 'players', 'leaderboard', 'history', 'strains'].map(read),
+  const [latest, map, players, leaderboard, history, strains, replay] = await Promise.all(
+    ['latest-tick', 'map', 'players', 'leaderboard', 'history', 'strains', 'replay'].map(read),
   );
-  return { latest, map, players, leaderboard, history, strains };
+  return { latest, map, players, leaderboard, history, strains, replay };
 }
 
 export function fixturePath(name, file) {
