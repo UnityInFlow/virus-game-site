@@ -7,7 +7,7 @@ import { renderHeader } from './views/header.js';
 import { bindMap, renderMap } from './views/map.js';
 import { renderLeaderboard, renderLegend } from './views/leaderboard.js';
 import { renderPlayer } from './views/player.js';
-import { renderStatus } from './views/status.js';
+import { renderStatus, renderStatusRail } from './views/status.js';
 
 let selected = null;
 let renderedKey = null;
@@ -37,6 +37,7 @@ function selectPlayer(id) {
 
 function onStateChange(state) {
   renderStatus(state);
+  renderStatusRail(state);
   if (!state.snapshot || state.phase === 'empty') {
     byId('content').hidden = true;
     return;
@@ -67,6 +68,7 @@ window.addEventListener('resize', () => {
 const scheme = window.matchMedia('(prefers-color-scheme: dark)');
 const repaint = () => renderCurrentSnapshot();
 if (scheme.addEventListener) scheme.addEventListener('change', repaint);
+window.addEventListener('virus-game-themechange', repaint);
 
 store.refresh();
 window.setInterval(() => store.refresh(), POLL_MS);

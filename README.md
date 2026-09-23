@@ -53,6 +53,27 @@ from a third party between one tick and the next.
 Development-only Node packages provide formatting, linting and browser tests. They are never
 part of the Pages deployment.
 
+## Outbreak Atlas design system
+
+The site is intentionally a field notebook, not a generic dashboard. `style.css` defines the
+small semantic token system used everywhere: display/body/mono typography; spacing; borders;
+elevation; focus treatment; motion; surfaces and status colours. Components consume those
+tokens rather than inventing local presentation values.
+
+The map is the first and largest region. A compact status rail tells a visitor which tick they
+are seeing, publication age, occupied territory, active players, failures and whether the
+snapshot is verified or retained after a failed refresh. Standings, the selected player dossier
+and history remain connected to the map instead of competing with it.
+
+Player identity is the same fixed, tested ten-colour palette in the map, roster, dossier and
+charts, and every coloured mark is paired with a player name. It meets the 3:1 non-text contrast
+threshold against both the paper and dark-lab surfaces. The appearance follows the system
+preference until a visitor selects the persistent paper-light or dark-lab override.
+
+Layouts are designed at wide, 1080px, 700px and 420px breakpoints; the 320px browser test checks
+that no horizontal page overflow is introduced. `prefers-reduced-motion` disables transitions,
+and keyboard focus has a visible tokenized outline.
+
 ## Develop and verify
 
 ```bash

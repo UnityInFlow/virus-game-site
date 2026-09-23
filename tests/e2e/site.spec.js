@@ -25,12 +25,40 @@ test('renders the verified desktop/mobile fixture with all main regions and no p
   await expect(page.locator('#chart-cells svg')).toBeVisible();
   await expect(page.locator('#chart-duration svg')).toBeVisible();
   await expect(page.locator('#chart-failures svg')).toBeVisible();
+  await expect(page.locator('#data-health')).toHaveAttribute('data-state', 'live');
+  await expect(page.locator('#health-label')).toHaveText('verified');
+  await expect(page.locator('#app-status')).toBeHidden();
   await expect(page.locator('#player-detail')).toContainText('Alice');
+  await expect(page.locator('#how-it-works')).toContainText('Programs propose.');
   await expect(page.getByText('Alice', { exact: true }).first()).toBeVisible();
   await page.getByRole('button', { name: 'Bob' }).click();
   await expect(page.locator('#player-detail')).toContainText('Bob');
   await page.locator('#map').dispatchEvent('click', { clientX: 0, clientY: 0 });
   expect(errors).toEqual([]);
+});
+
+test('keeps a deliberate Atlas hierarchy, persistent theme and a usable 320px layout', async ({
+  page,
+}) => {
+  await useFixture(page);
+  await page.goto('/');
+  await expect(page.getByRole('banner')).toBeVisible();
+  await expect(page.getByRole('navigation', { name: 'Game information' })).toBeVisible();
+  await expect(page.locator('link[rel="icon"][href="assets/outbreak-mark.svg"]')).toHaveCount(1);
+
+  const theme = page.getByRole('button', { name: /Switch to .* theme/ });
+  await theme.click();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await expect(theme).toHaveAccessibleName('Switch to light theme');
+  await page.reload();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+
+  await page.setViewportSize({ width: 320, height: 720 });
+  await expect(page.locator('#live-map')).toBeVisible();
+  await expect(page.locator('#leaderboard-body tr')).toHaveCount(2);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
+    true,
+  );
 });
 
 test('shows a retryable initial data error instead of a partial dashboard', async ({ page }) => {
@@ -93,6 +121,8 @@ test('a failed refresh retains the dashboard, focus, and advancing refresh age',
   unavailable = true;
   await page.evaluate(() => document.querySelector('#retry-load').click());
   await expect(page.getByText('Showing the last verified tick.')).toBeVisible();
+  await expect(page.locator('#data-health')).toHaveAttribute('data-state', 'degraded');
+  await expect(page.locator('#health-label')).toHaveText('stale data');
   await expect(bob).toBeFocused();
   await expect(page.locator('#last-refreshed')).not.toHaveText('refreshed 0s ago', {
     timeout: 2_500,
