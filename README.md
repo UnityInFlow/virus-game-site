@@ -19,7 +19,7 @@ edit survives only until a later publication and is never read by anything in be
 The engine, the rules, the game state and the player strains live in the game repository,
 which is private. Nothing here decides anything — this is a projection.
 
-## The five documents
+## The six documents
 
 The frontend reads only these (spec §47), and they are a deliberately narrow public API:
 
@@ -30,11 +30,18 @@ The frontend reads only these (spec §47), and they are a deliberately narrow pu
 | `players.json`     | per player: cells, kills, and each strain's cells, kills, enabled/suspended, last failure kind              |
 | `history.json`     | `players`, `columns`, and one compact row per tick — cells per player, totals, actions, durations, failures |
 | `latest-tick.json` | the tick number, its id, the state hash, per-stage durations, and this tick's strain failures               |
+| `strains.json`     | current strain runtime/API/hash/state and the exact active entrypoint source, when available                |
 
 `ownerIndex` is an index into `map.json`'s `players`; the same order is used by
 `history.json`'s per-tick `cells` array. The browser validates every document and their
 shared tick/player relationships before it replaces the map on screen. A failed refresh
 keeps the last verified tick visible and reports that the data is temporarily degraded.
+
+`strains.json` is an intentional public-strategy API. Once an enabled, non-suspended
+submission is active, the entrypoint it executes is published verbatim for opponents and
+spectators. It never includes a path, manifest, helper file, runtime output, environment
+value or secret. Players must therefore keep credentials and private material out of their
+entrypoint source.
 
 ## No build step
 
